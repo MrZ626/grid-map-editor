@@ -125,11 +125,11 @@ local function pushHist()
     histPtr=#histDat+1
 end
 
+local function loadKeyBind()
+    if FILE.exist('keybind.lua') then keybind=FILE.load('keybind.lua','-luaon') end
+end
 function scene.load()
-    if FILE.exist('keybind.lua') then
-        keybind=FILE.load('keybind.lua','-luaon')
-        assert(type(keybind)=='table',"keybind.lua must return a table")
-    end
+    loadKeyBind()
     init()
 end
 
@@ -217,14 +217,19 @@ function scene.keyDown(key,isRep)
                 -- pushHist()
                 MSG('check',"Pasted!")
             end
+        elseif key=='o' then
+            if not FILE.exist('keybind.lua') then FILE.save('return{\n    w=1,\n}','keybind.lua') end
+            UTIL.openSaveDirectory()
+        elseif key=='l' then
+            loadKeyBind()
         end
     else
-        if type(keybind[key])=='number' then
+        if penInputBuffer and tonumber(key) then
+            penInputBuffer=penInputBuffer..key
+        elseif type(keybind[key])=='number' then
             pen.type=keybind[key]
             pen.style=0
             penInputBuffer=""
-        elseif tonumber(key) and penInputBuffer then
-            penInputBuffer=penInputBuffer..key
         elseif key=='space' or key=='return' then
             if penInputBuffer then
                 pen.style=tonumber(penInputBuffer) or 0
