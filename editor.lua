@@ -129,6 +129,7 @@ local function loadConfig()
     if FILE.exist('keybind.lua') then keybind=FILE.load('keybind.lua','-luaon') end
 end
 function scene.load()
+    FILE.createDirectory({'saves','texture'})
     if not FILE.exist('keybind.lua') then FILE.save('return{\n    w=1,\n}','keybind.lua') end
     loadConfig()
     init()
@@ -197,7 +198,7 @@ function scene.keyDown(key,isRep)
     if isRep then return end
     if love.keyboard.isDown('lctrl','rctrl') then
         if key=='s' then
-            FILE.save(dumpMap(map):tostring(),os.date("map_%y%m%d_%H%M%S"))
+            FILE.save(dumpMap(map):tostring(),os.date("saves/map_%y%m%d_%H%M%S"))
             MSG('check',"Saved!")
         elseif key=='c' then
             if sel.x1 then
