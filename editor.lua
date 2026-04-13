@@ -125,11 +125,12 @@ local function pushHist()
     histPtr=#histDat+1
 end
 
-local function loadKeyBind()
+local function loadConfig()
     if FILE.exist('keybind.lua') then keybind=FILE.load('keybind.lua','-luaon') end
 end
 function scene.load()
-    loadKeyBind()
+    if not FILE.exist('keybind.lua') then FILE.save('return{\n    w=1,\n}','keybind.lua') end
+    loadConfig()
     init()
 end
 
@@ -218,10 +219,9 @@ function scene.keyDown(key,isRep)
                 MSG('check',"Pasted!")
             end
         elseif key=='o' then
-            if not FILE.exist('keybind.lua') then FILE.save('return{\n    w=1,\n}','keybind.lua') end
             UTIL.openSaveDirectory()
         elseif key=='l' then
-            loadKeyBind()
+            loadConfig()
         end
     else
         if penInputBuffer and tonumber(key) then
