@@ -13,13 +13,6 @@ local histPtr ---@type integer histDat[histPtr] should be nil on latest state
 ---@field style integer 1B [0, 255]
 ---@field data? integer 2B [0, 65535]
 
-
-local map ---@type GridMap
-local cam=GC.newCamera() ---@type Zenitha.Camera
-local numInputBuffer ---@type string
-local numInputMode ---@type false|'id'|'data'
-local clipboard ---@type string.buffer
-
 ---@class Selection
 ---@field x integer?
 ---@field y integer?
@@ -27,8 +20,20 @@ local clipboard ---@type string.buffer
 ---@field y1 integer? -- y1, guaranteed smaller than y2
 ---@field x2 integer? -- x2, guaranteed greater than x1
 ---@field y2 integer? -- y2, guaranteed greater than y1
-local sel
+
+local keybind={} ---@type table<string, integer>
+
+local map ---@type GridMap
+local cam=GC.newCamera() ---@type Zenitha.Camera
+local clipboard ---@type string.buffer
+local sel ---@type Selection
 local mouse={x=0,y=0}
+local penInputBuffer ---@type string?
+-- local penInputMode ---@type false|'id'|'data'
+local pen={
+    type=1,
+    style=0,
+}
 
 ---@param m GridMap
 ---@param x1? integer
@@ -92,14 +97,11 @@ local function init(mapData)
         map=loadMap(mapData)
     else
         map=TABLE.newMat(false,3,3)
-        map[2][2]={type=1,style=2}
-        map[2][3]={type=1,style=2,data=3}
     end
     cam.k0=26
     cam.x0=-cam.k0*#map[1]/2
     cam.y0=-cam.k0*#map/2
-    numInputBuffer=''
-    numInputMode=false
+    penInputBuffer=nil
     sel={
         x=nil,
         y=nil,
@@ -124,6 +126,10 @@ local function pushHist()
 end
 
 function scene.load()
+    if FILE.exist('keybind.lua') then
+        keybind=FILE.load('keybind.lua','-luaon')
+        assert(type(keybind)=='table',"keybind.lua must return a table")
+    end
     init()
 end
 
@@ -174,7 +180,7 @@ function scene.mouseDown(x,y,k)
                     end
                 end
             end
-            map[mouse.y][mouse.x]={type=1,style=2}
+            map[mouse.y][mouse.x]=TABLE.copyAll(pen)
         elseif k==2 then
             if MATH.between(mouse.y,1,#map) and MATH.between(mouse.x,1,#map[1]) then
                 map[mouse.y][mouse.x]=false
@@ -213,7 +219,24 @@ function scene.keyDown(key,isRep)
             end
         end
     else
-        if key=='z' then
+        if type(keybind[key])=='number' then
+            pen.type=keybind[key]
+            pen.style=0
+            penInputBuffer=""
+        elseif tonumber(key) and penInputBuffer then
+            penInputBuffer=penInputBuffer..key
+        elseif key=='space' or key=='return' then
+            if penInputBuffer then
+                pen.style=tonumber(penInputBuffer) or 0
+                penInputBuffer=nil
+            else
+                penInputBuffer=""
+            end
+        elseif key=='backspace' then
+            if penInputBuffer then
+                penInputBuffer=penInputBuffer:sub(1,-2)
+            end
+        elseif key=='z' then
             -- Undo
             if histPtr>1 then
                 histPtr=histPtr-1
@@ -225,7 +248,7 @@ function scene.keyDown(key,isRep)
                 loadMap(histDat[histPtr])
                 histPtr=histPtr+1
             end
-        elseif key=='backspace' or key=='delete' then
+        elseif key=='delete' then
             if sel.x1 then
                 for y=sel.y1,sel.y2 do
                     for x=sel.x1,sel.x2 do
@@ -257,14 +280,15 @@ function scene.draw()
     GC.setColor(1,1,1)
     GC.rectangle('line',-.02,-.02,w+.04,h+.04)
     GC.setLineWidth(.02)
+    FONT.set(20)
     for y=1,h do
         for x=1,w do
             local c=map[y][x]
             if c then
                 GC.rectangle('line',x-1+.05,y-1+.05,.9,.9)
-                GC.print(c.type,x-1+.1,y-1+.05,nil,.02)
-                GC.print(c.style,x-1+.1,y-1+.35,nil,.02)
-                if c.data then GC.print(c.data,x-1+.1,y-1+.65,nil,.02) end
+                GC.print(c.type,x-1+.1,y-1+.05,nil,.01)
+                GC.print(c.style,x-1+.1,y-1+.35,nil,.01)
+                if c.data then GC.print(c.data,x-1+.1,y-1+.65,nil,.01) end
             end
         end
     end
@@ -279,6 +303,16 @@ function scene.draw()
     end
     GC.setColor(1,0,1)
     GC.rectangle('line',mouse.x-1,mouse.y-1,1,1,.26)
+
+    GC.replaceTransform(SCR.xOy_ul)
+    GC.setColor(1,1,1)
+    FONT.set(40)
+    GC.print("Type:"..pen.type,10,0)
+    if penInputBuffer then
+        GC.print("Style: "..penInputBuffer.."...",10,40)
+    else
+        GC.print("Style: "..pen.style,10,40)
+    end
 end
 
 return scene
