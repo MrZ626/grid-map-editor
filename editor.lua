@@ -21,6 +21,11 @@ local histPtr ---@type integer histDat[histPtr] should be nil on latest state
 ---@field x2 integer? -- x2, guaranteed greater than x1
 ---@field y2 integer? -- y2, guaranteed greater than y1
 
+local setting={
+    backgroundColor="000000",
+    textColor="FFFFFF",
+    scrollSpeed=1.26,
+}
 local keybind={} ---@type table<string, integer>
 local texture={} ---@type table<string, love.Image>
 
@@ -128,7 +133,18 @@ end
 
 local texW
 local function loadConfig()
+    -- Settings
+    if FILE.exist('setting.lua') then setting=FILE.load('setting.lua','-luaon') end
+    if not setting._init then
+        setting.backgroundColor={COLOR.HEX(setting.backgroundColor)}
+        setting.textColor={COLOR.HEX(setting.textColor)}
+        setting._init=true
+    end
+
+    -- Keybind
     if FILE.exist('keybind.lua') then keybind=FILE.load('keybind.lua','-luaon') end
+
+    -- Texture
     local list=love.filesystem.getDirectoryItems('texture')
     TABLE.clear(texture)
     for i=1,#list do
@@ -156,6 +172,7 @@ end
 function scene.load()
     FILE.createDirectory({'saves','texture'})
     if not FILE.exist('keybind.lua') then FILE.save('return{\n    w=1,\n}','keybind.lua') end
+    if not FILE.exist('setting.lua') then FILE.save(TABLE.dump(setting),'setting.lua') end
     loadConfig()
     init()
 end
@@ -217,7 +234,7 @@ function scene.mouseDown(x,y,k)
     end
 end
 function scene.wheelMove(_,dy)
-    cam:scale(1.26^dy)
+    cam:scale(setting.scrollSpeed^dy)
 end
 
 function scene.keyDown(key,isRep)
@@ -315,6 +332,7 @@ function scene.update(dt)
 end
 
 function scene.draw()
+    GC.clear(setting.backgroundColor)
     GC.replaceTransform(SCR.xOy_m)
     cam:apply()
     local w,h=#map[1],#map
@@ -329,8 +347,10 @@ function scene.draw()
             if c then
                 local lib=texture[c.type]
                 if lib and lib[c.style] then
+                    GC.setColor(1,1,1)
                     GC.draw(lib[c.style],x-1,y-1,0,1/texW)
                 else
+                    GC.setColor(setting.textColor)
                     GC.rectangle('line',x-1+.05,y-1+.05,.9,.9)
                     GC.print(c.type,x-1+.1,y-1+.05,nil,.01)
                     GC.print(c.style,x-1+.1,y-1+.35,nil,.01)
