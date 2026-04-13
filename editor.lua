@@ -140,11 +140,45 @@ function scene.mouseMove(x,y,dx,dy)
 end
 function scene.mouseDown(x,y,k)
     if love.keyboard.isDown('lctrl','rctrl') then
-        if not sel.x then
-            sel.x,sel.y=mouse.x,mouse.y
-        else
-            sel.x1,sel.y1=math.min(sel.x,mouse.x),math.min(sel.y,mouse.y)
-            sel.x2,sel.y2=math.max(sel.x,mouse.x),math.max(sel.y,mouse.y)
+        if k==1 then
+            if not sel.x then
+                sel.x,sel.y=mouse.x,mouse.y
+            else
+                sel.x1,sel.y1=math.min(sel.x,mouse.x),math.min(sel.y,mouse.y)
+                sel.x2,sel.y2=math.max(sel.x,mouse.x),math.max(sel.y,mouse.y)
+            end
+        end
+    else
+        if k==1 then
+            if mouse.y<1 then
+                local cnt=1-mouse.y
+                for _=1,cnt do ins(map,1,TABLE.new(false,#map[1])) end
+                cam.y0=cam.y0-cam.k*cnt
+                cam.y=cam.y0
+                mouse.y=1
+            elseif mouse.y>#map then
+                for _y=#map+1,mouse.y do map[_y]=TABLE.new(false,#map[1]) end
+            end
+            if mouse.x<1 then
+                local cnt=1-mouse.x
+                for _y=1,#map do
+                    for _=1,cnt do ins(map[_y],1,false) end
+                end
+                cam.x0=cam.x0-cam.k*cnt
+                cam.x=cam.x0
+                mouse.x=1
+            elseif mouse.x>#map[1] then
+                for _y=1,#map do
+                    for _x=#map[1]+1,mouse.x do
+                        map[_y][_x]=false
+                    end
+                end
+            end
+            map[mouse.y][mouse.x]={type=1,style=2}
+        elseif k==2 then
+            if MATH.between(mouse.y,1,#map) and MATH.between(mouse.x,1,#map[1]) then
+                map[mouse.y][mouse.x]=false
+            end
         end
     end
 end
@@ -174,6 +208,7 @@ function scene.keyDown(key,isRep)
                         end
                     end
                 end
+                -- pushHist()
                 MSG('check',"Pasted!")
             end
         end
@@ -197,6 +232,7 @@ function scene.keyDown(key,isRep)
                         map[y+1][x+1]=false
                     end
                 end
+                -- pushHist()
             end
         elseif key=='escape' then
             TABLE.clear(sel)
