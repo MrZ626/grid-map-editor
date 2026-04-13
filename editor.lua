@@ -22,6 +22,7 @@ local histPtr ---@type integer histDat[histPtr] should be nil on latest state
 ---@field y2 integer? -- y2, guaranteed greater than y1
 
 local keybind={} ---@type table<string, integer>
+local texture={} ---@type table<string, love.Image>
 
 local map ---@type GridMap
 local cam=GC.newCamera() ---@type Zenitha.Camera
@@ -125,8 +126,32 @@ local function pushHist()
     histPtr=#histDat+1
 end
 
+local texW
 local function loadConfig()
     if FILE.exist('keybind.lua') then keybind=FILE.load('keybind.lua','-luaon') end
+    local list=love.filesystem.getDirectoryItems('texture')
+    TABLE.clear(texture)
+    for i=1,#list do
+        local name=list[i]
+        local t,s=string.match(name,"^(%d+)_(%d+)")
+        t,s=tonumber(t),tonumber(s)
+        if t and s then
+            if not texture[t] then texture[t]={} end
+            local img=GC.newImage('texture/'..name)
+            texture[t][s]=img
+            local w,h=img:getDimensions()
+            if not texW then
+                texW=w
+                MSG('info',"Assumed texture size: "..texW.."px")
+            elseif w~=texW then
+                MSG('warn',("Texture size mismatch: %s (%d x %d)"):format(name,w,h))
+            end
+            if w~=h then MSG('warn',("Non-square texture: %s (%d x %d)"):format(name,w,h)) end
+        else
+            MSG('warn',("Invalid texture: %s"):format(name))
+        end
+    end
+    MSG('check',#list.." textures loaded")
 end
 function scene.load()
     FILE.createDirectory({'saves','texture'})
@@ -291,13 +316,20 @@ function scene.draw()
         for x=1,w do
             local c=map[y][x]
             if c then
-                GC.rectangle('line',x-1+.05,y-1+.05,.9,.9)
-                GC.print(c.type,x-1+.1,y-1+.05,nil,.01)
-                GC.print(c.style,x-1+.1,y-1+.35,nil,.01)
+                local lib=texture[c.type]
+                if lib and lib[c.style] then
+                    GC.draw(lib[c.style],x-1,y-1,0,1/texW)
+                else
+                    GC.rectangle('line',x-1+.05,y-1+.05,.9,.9)
+                    GC.print(c.type,x-1+.1,y-1+.05,nil,.01)
+                    GC.print(c.style,x-1+.1,y-1+.35,nil,.01)
+                end
                 if c.data then GC.print(c.data,x-1+.1,y-1+.65,nil,.01) end
             end
         end
     end
+
+    -- Selection
     if sel.x then
         GC.setColor(0,1,1)
         -- Starting point set
@@ -307,9 +339,13 @@ function scene.draw()
             GC.rectangle('line',sel.x1-1+.2,sel.y1-1+.2,sel.x2-sel.x1+.6,sel.y2-sel.y1+.6)
         end
     end
+
+    -- Cursor
     GC.setColor(1,0,1)
+    GC.setLineWidth(.06)
     GC.rectangle('line',mouse.x-1,mouse.y-1,1,1,.26)
 
+    -- Pen Info
     GC.replaceTransform(SCR.xOy_ul)
     GC.setColor(1,1,1)
     FONT.set(40)
