@@ -33,7 +33,7 @@ local map ---@type GridMap
 local cam=GC.newCamera() ---@type Zenitha.Camera
 local clipboard ---@type string.buffer
 local sel ---@type Selection
-local mouse={x=0,y=0}
+local mouse={x=1,y=1}
 local penInputBuffer ---@type string?
 -- local penInputMode ---@type false|'id'|'data'
 local pen={
@@ -220,7 +220,7 @@ function scene.mouseDown(x,y,k)
                 mouse.x=1
             elseif mouse.x>#map[1] then
                 for _y=1,#map do
-                    for _x=#map[1]+1,mouse.x do
+                    for _x=#map[_y]+1,mouse.x do
                         map[_y][_x]=false
                     end
                 end
@@ -342,6 +342,7 @@ function scene.draw()
     GC.setLineWidth(.02)
     FONT.set(20)
     for y=1,h do
+        -- GC.print(#map[y],-1,y-1+.05,nil,.01)
         for x=1,w do
             local c=map[y][x]
             if c then
