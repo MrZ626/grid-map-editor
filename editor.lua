@@ -174,6 +174,7 @@ end
 function scene.mouseDown(x,y,k)
     if love.keyboard.isDown('lctrl','rctrl') then
         if k==1 then
+            mouse.x,mouse.y=MATH.clamp(mouse.x,1,#map[1]),MATH.clamp(mouse.y,1,#map)
             if not sel.x then
                 sel.x,sel.y=mouse.x,mouse.y
             else
@@ -222,15 +223,22 @@ end
 function scene.keyDown(key,isRep)
     if isRep then return end
     if love.keyboard.isDown('lctrl','rctrl') then
-        if key=='s' then
-            FILE.save(dumpMap(map):tostring(),os.date("saves/map_%y%m%d_%H%M%S"))
-            MSG('check',"Saved!")
-        elseif key=='c' then
+        if key=='f' then -- Fill
+            if sel.x1 then
+                for y=sel.y1,sel.y2 do
+                    for x=sel.x1,sel.x2 do
+                        if not map[y][x] then
+                            map[y][x]=TABLE.copyAll(pen)
+                        end
+                    end
+                end
+            end
+        elseif key=='c' then -- Copy
             if sel.x1 then
                 clipboard=dumpMap(map,sel.x1,sel.y1,sel.x2,sel.y2)
                 MSG('check',"Copied!")
             end
-        elseif key=='v' then
+        elseif key=='v' then -- Paste
             if sel.x then
                 local m=loadMap(clipboard)
                 local px1,py1=sel.x1 or sel.x,sel.y1 or sel.y
@@ -244,9 +252,12 @@ function scene.keyDown(key,isRep)
                 -- pushHist()
                 MSG('check',"Pasted!")
             end
-        elseif key=='o' then
+        elseif key=='s' then -- Save
+            FILE.save(dumpMap(map):tostring(),os.date("saves/map_%y%m%d_%H%M%S"))
+            MSG('check',"Saved!")
+        elseif key=='o' then -- Open save directory
             UTIL.openSaveDirectory()
-        elseif key=='l' then
+        elseif key=='l' then -- Reload config
             loadConfig()
         end
     else
